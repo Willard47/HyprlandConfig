@@ -44,7 +44,7 @@
 </ul>
 
 <h3>One-line installer</h3>
-<pre><code>/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/yourusername/HyprlandConfig/main/bootstrap-hyprland-arch-safe.sh)"</code></pre>
+<pre><code>/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Willard47/HyprlandConfig/main/bootstrap-hyprland-arch-safe.sh)"</code></pre>
 
 <p>This script will:</p>
 <ul>
