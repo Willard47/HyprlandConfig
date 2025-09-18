@@ -1,0 +1,12 @@
+configuration {
+    prompt: "Scripts";
+    font: "FiraCode Nerd Font 10";
+    color-enabled: true;
+}
+
+element {
+    "Change Wallpaper"
+    "Scratchpad"
+    "Backup Config"
+    "Restore Config"
+}

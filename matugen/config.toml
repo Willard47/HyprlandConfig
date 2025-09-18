@@ -1,0 +1,8 @@
+[general]
+mode = "wallpaper"
+refresh_interval = 30
+
+[colors]
+primary = "#1e1e2e"
+secondary = "#cdd6f4"
+accent = "#f5c2e7"

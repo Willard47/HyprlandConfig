@@ -1,0 +1,10 @@
+add_newline = false
+format = "$username$hostname $directory $git_branch$git_status $character"
+[directory]
+truncation_length = 3
+[git_branch]
+symbol = " "
+[git_status]
+conflicted = "⚡"
+staged = "✔"
+untracked = "…"

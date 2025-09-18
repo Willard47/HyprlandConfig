@@ -1,0 +1,18 @@
+{
+  "layer": "top",
+  "height": 30,
+  "modules-left": ["workspaces"],
+  "modules-center": ["clock"],
+  "modules-right": [
+    {"name": "weather", "update_interval": 600},
+    {"name": "music", "update_interval": 10},
+    {"name": "cpu", "update_interval": 5},
+    {"name": "ram", "update_interval": 5},
+    {"name": "battery", "format": "{capacity}%", "critical-threshold": 20}
+  ],
+  "style": {
+    "background": "#${color_bg}",
+    "text-color": "#${color_fg}",
+    "accent": "#${color_accent}"
+  }
+}

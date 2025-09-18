@@ -1,0 +1,6 @@
+configuration {
+    modi: "drun,run";
+    show-icons: true;
+    font: "FiraCode Nerd Font 10";
+    color-enabled: true;
+}

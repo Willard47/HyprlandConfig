@@ -1,0 +1,10 @@
+{
+  "font": "FiraCode Nerd Font 10",
+  "refresh_interval": 5,
+  "colors": {
+    "background": "#1e1e2e",
+    "foreground": "#cdd6f4",
+    "accent": "#f5c2e7"
+  },
+  "modules": ["workspaces", "clock", "cpu", "ram", "battery", "music", "weather"]
+}
