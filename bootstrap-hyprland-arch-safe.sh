@@ -1,107 +1,103 @@
 #!/usr/bin/env bash
-# bootstrap-hyprland-arch-safe.sh
-# Installs Ultimate Hyprland setup on Arch Linux minimal with dependency checks
-
 set -e
 
-REPO_URL="https://github.com/willard47/HyprlandConfig.git"
-CONFIG_DIR="$HOME/.config"
-USER_NAME="$USER"
-TTY="tty1"
+echo "🔧 Starting Hyprland full setup for Arch minimal..."
 
-# ---------------- Functions ----------------
-check_and_install() {
-  local pkg="$1"
-  if ! pacman -Qq $pkg &> /dev/null; then
-    echo "Installing missing package: $pkg"
-    sudo pacman -S --needed --noconfirm $pkg
-  fi
-}
+# --- Step 1: Install prerequisites
+echo "📦 Installing base-devel, git, and essential packages..."
+sudo pacman -Syu --needed --noconfirm base-devel git curl wget jq
 
-check_and_install_aur() {
-  local pkg="$1"
-  if ! pacman -Qq $pkg &> /dev/null; then
-    echo "Installing missing AUR package: $pkg"
-    yay -S --noconfirm $pkg
-  fi
-}
+# --- Step 2: Install official packages
+echo "📦 Installing core packages..."
+sudo pacman -S --noconfirm hyprland waybar swaync rofi wofi swww \
+    starship neovim ghostty playerctl brightnessctl grim slurp wl-clipboard \
+    hyprlock wlogout pamixer pavucontrol ttf-nerd-fonts-symbols-mono
 
-# ---------------- Step 1: System Update ----------------
-echo "Updating system..."
-sudo pacman -Syu --needed --noconfirm
-
-# ---------------- Step 2: Base packages ----------------
-echo "Checking base packages..."
-for pkg in base-devel git wget curl unzip; do
-  check_and_install $pkg
-done
-
-# ---------------- Step 3: Install yay if missing ----------------
-if ! command -v yay &> /dev/null; then
-    echo "Installing yay (AUR helper)..."
-    git clone https://aur.archlinux.org/yay.git /tmp/yay
-    cd /tmp/yay
-    makepkg -si --noconfirm
-    cd ~
-    rm -rf /tmp/yay
+# --- Step 3: Backup and clone config
+if [ -d "$HOME/.config" ]; then
+    echo "📂 Backing up existing ~/.config to ~/.config.bak"
+    mv ~/.config ~/.config.bak
 fi
 
-# ---------------- Step 4: Hyprland and core packages ----------------
-echo "Checking core Hyprland packages..."
-for pkg in hyprland swww waybar swaync starship rofi neovim \
-           wl-clipboard clipmenu grim slurp pamixer brightnessctl \
-           alsa-utils mpd playerctl thunar; do
-  check_and_install $pkg
-done
+echo "📥 Cloning HyprlandConfig repo..."
+git clone https://github.com/Willard47/HyprlandConfig.git ~/.config
 
-# ---------------- Step 5: AUR packages ----------------
-echo "Checking AUR packages..."
-for pkg in ghostty nerd-fonts-complete lua-lpeg; do
-  check_and_install_aur $pkg
-done
-
-# ---------------- Step 6: Backup .config and clone repository ----------------
-if [ -d "$CONFIG_DIR" ]; then
-    echo "Backing up existing .config..."
-    mv "$CONFIG_DIR" "${CONFIG_DIR}.bak_$(date +%Y%m%d_%H%M%S)"
-fi
-echo "Cloning Hyprland config repository..."
-git clone "$REPO_URL" "$CONFIG_DIR"
-
-# ---------------- Step 7: Make scripts executable ----------------
-chmod +x "$CONFIG_DIR/scripts/"*.sh
-
-# ---------------- Step 8: Neovim plugin install ----------------
-nvim --headless +PackerSync +qa
-
-# ---------------- Step 9: Starship setup ----------------
-if ! grep -q "eval \"\$(starship init bash)\"" ~/.bashrc; then
-  echo "eval \"\$(starship init bash)\"" >> ~/.bashrc
-fi
-
-# ---------------- Step 10: Wallpaper directory ----------------
-mkdir -p "$HOME/Pictures/Wallpapers"
-
-# ---------------- Step 11: TTY autologin ----------------
-sudo mkdir -p /etc/systemd/system/getty@$TTY.service.d/
-sudo tee /etc/systemd/system/getty@$TTY.service.d/override.conf > /dev/null <<EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin $USER_NAME --noclear %I \$TERM
-EOF
-sudo systemctl daemon-reexec
-sudo systemctl restart getty@$TTY
-
-# ---------------- Step 12: Auto-start Hyprland ----------------
-if ! grep -q "exec Hyprland" ~/.bash_profile; then
-  tee -a ~/.bash_profile > /dev/null <<EOF
-# Start Hyprland automatically on TTY1
-if [[ -z \$DISPLAY ]] && [[ \$(tty) == /dev/$TTY ]]; then
-    exec Hyprland
-fi
+# --- Step 4: Ensure colors.conf exists
+COLORS_FILE="$HOME/.config/hypr/colors.conf"
+if [ ! -f "$COLORS_FILE" ]; then
+    echo "🎨 Creating fallback colors.conf..."
+    mkdir -p "$(dirname "$COLORS_FILE")"
+    cat > "$COLORS_FILE" <<EOF
+# Fallback colors until Matugen generates them
+\$accent = rgb(89b4fa)
+\$background = rgb(1e1e2e)
+\$foreground = rgb(cdd6f4)
 EOF
 fi
 
-# ---------------- Step 13: Final Message ----------------
-echo "Hyprland installation complete with dependency checks!"
-echo "Reboot to autologin and launch Hyprland with your full environment."
+# --- Step 5: Generate first wallpaper & theme
+echo "🖼 Setting initial wallpaper & generating colors..."
+if [ -x "$HOME/.config/scripts/change-wallpaper.sh" ]; then
+    "$HOME/.config/scripts/change-wallpaper.sh" || echo "⚠️ Wallpaper script failed, skipping"
+else
+    echo "⚠️ No wallpaper script found, skipping wallpaper setup"
+fi
+
+# --- Step 6: Ensure keybind for closing windows
+KEYBINDS_FILE="$HOME/.config/hypr/keybinds.conf"
+if ! grep -q "killactive" "$KEYBINDS_FILE"; then
+    echo "🖱 Adding SUPER+Q close window keybind..."
+    echo "bind=SUPER,Q,killactive" >> "$KEYBINDS_FILE"
+fi
+
+# --- Step 7: Ensure wlogout layout
+echo "🔧 Creating default wlogout layout..."
+mkdir -p ~/.config/wlogout
+cat > ~/.config/wlogout/layout <<'EOF'
+[
+  { "label": "logout", "action": "hyprctl dispatch exit", "text": "Logout" },
+  { "label": "shutdown", "action": "systemctl poweroff", "text": "Shutdown" },
+  { "label": "reboot", "action": "systemctl reboot", "text": "Reboot" },
+  { "label": "suspend", "action": "systemctl suspend", "text": "Suspend" }
+]
+EOF
+
+# --- Step 8: Ensure hyprlock.conf exists
+echo "🔒 Creating default hyprlock config..."
+mkdir -p ~/.config/hypr
+cat > ~/.config/hypr/hyprlock.conf <<'EOF'
+# Minimal Hyprlock config
+background {
+    color = rgba(0,0,0,0.6)
+}
+label {
+    text = <user>
+    font_size = 28
+    color = rgba(255,255,255,1.0)
+    position = 0, 50
+}
+EOF
+
+# --- Step 9: Ensure Neovim init.lua exists
+NVIM_INIT="$HOME/.config/nvim/init.lua"
+if [ ! -f "$NVIM_INIT" ]; then
+    echo "📝 Creating minimal Neovim init.lua..."
+    mkdir -p ~/.config/nvim
+    cat > "$NVIM_INIT" <<'EOF'
+require("plugins")
+require("keymaps")
+require("lsp")
+EOF
+fi
+
+# --- Step 10: Install Neovim plugins
+if command -v nvim &> /dev/null; then
+    echo "📦 Installing Neovim plugins via Packer..."
+    nvim --headless +PackerSync +qall || echo "⚠️ Neovim plugin sync failed, check config"
+fi
+
+# --- Step 11: Make scripts executable
+echo "⚙️ Making all scripts executable..."
+find ~/.config/scripts -type f -iname "*.sh" -exec chmod +x {} \;
+
+echo "✅ Setup complete! Reboot or log out to start Hyprland."
