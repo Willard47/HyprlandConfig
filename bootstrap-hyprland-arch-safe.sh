@@ -4,7 +4,7 @@
 
 set -e
 
-REPO_URL="https://github.com/yourusername/HyprlandConfig.git"
+REPO_URL="https://github.com/willard47/HyprlandConfig.git"
 CONFIG_DIR="$HOME/.config"
 USER_NAME="$USER"
 TTY="tty1"
