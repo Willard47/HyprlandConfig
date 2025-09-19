@@ -7,14 +7,14 @@ set -e
 UPDATE_ONLY=false
 if [[ "$1" == "--update" ]]; then
     UPDATE_ONLY=true
-    echo "🔄 Running in UPDATE mode (will only pull latest configs)"
+    echo "🔄 Running in UPDATE mode (will only update configs and scripts)"
 fi
 
 # -----------------------------------------------------------------------------
 # Install dependencies (only on fresh installs)
 # -----------------------------------------------------------------------------
 if [ "$UPDATE_ONLY" = false ]; then
-    echo "📦 Installing base packages..."
+    echo "📦 Installing required packages..."
     sudo pacman -Syu --needed --noconfirm \
         hyprland waybar swaync swww \
         rofi wlogout hyprlock \
@@ -35,16 +35,32 @@ echo "📥 Pulling latest configs from $CONFIG_REPO..."
 rm -rf "$CONFIG_TEMP_DIR"
 git clone --depth=1 "$CONFIG_REPO" "$CONFIG_TEMP_DIR"
 
-echo "📂 Copying configs to ~/.config..."
-mkdir -p ~/.config
+# -----------------------------------------------------------------------------
+# Backup existing .config folder (optional safety)
+# -----------------------------------------------------------------------------
+BACKUP_DIR="$HOME/.config.bak_$(date +%Y%m%d%H%M%S)"
+echo "💾 Backing up existing ~/.config to $BACKUP_DIR"
+mv "$HOME/.config" "$BACKUP_DIR" 2>/dev/null || true
+mkdir -p "$HOME/.config"
+
+# -----------------------------------------------------------------------------
+# Copy configs to ~/.config
+# -----------------------------------------------------------------------------
+echo "📂 Copying configs..."
 cp -rf "$CONFIG_TEMP_DIR/.config/"* ~/.config/
 
-# Ensure scripts are executable
-echo "🔧 Making scripts executable..."
+# Force update scripts folder
+if [ -d "$CONFIG_TEMP_DIR/.config/scripts" ]; then
+    echo "🔧 Updating scripts folder..."
+    rm -rf "$HOME/.config/scripts"
+    cp -rf "$CONFIG_TEMP_DIR/.config/scripts" "$HOME/.config/scripts"
+fi
+
+# Make scripts executable
 find ~/.config/scripts -type f -exec chmod +x {} \;
 
 # -----------------------------------------------------------------------------
-# Download wallpapers if present
+# Download wallpapers from repo if fresh install
 # -----------------------------------------------------------------------------
 if [ "$UPDATE_ONLY" = false ] && [ -d "$CONFIG_TEMP_DIR/wallpapers" ]; then
     WALLPAPER_DIR="$HOME/Pictures/wallpapers"
@@ -54,7 +70,7 @@ if [ "$UPDATE_ONLY" = false ] && [ -d "$CONFIG_TEMP_DIR/wallpapers" ]; then
 fi
 
 # -----------------------------------------------------------------------------
-# Run change-wallpaper.sh to set wallpaper and generate colors
+# Set wallpaper & generate colors
 # -----------------------------------------------------------------------------
 WALLPAPER=$(find "$HOME/Pictures/wallpapers" -type f | head -n 1)
 if [ -n "$WALLPAPER" ] && [ -f "$HOME/.config/scripts/change-wallpaper.sh" ]; then
@@ -63,7 +79,7 @@ if [ -n "$WALLPAPER" ] && [ -f "$HOME/.config/scripts/change-wallpaper.sh" ]; th
 fi
 
 # -----------------------------------------------------------------------------
-# Reload Hyprland and bars
+# Reload Hyprland & bars
 # -----------------------------------------------------------------------------
 echo "🔄 Reloading Hyprland and bars..."
 hyprctl reload 2>/dev/null || true
@@ -79,5 +95,5 @@ echo "✅ Setup complete!"
 if [ "$UPDATE_ONLY" = false ]; then
     echo "💡 Log out and log back into Hyprland for first-time setup."
 else
-    echo "💡 Configs updated successfully without reinstalling packages."
+    echo "💡 Configs and scripts updated successfully."
 fi
