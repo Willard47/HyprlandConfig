@@ -7,7 +7,7 @@ set -e
 UPDATE_ONLY=false
 if [[ "$1" == "--update" ]]; then
     UPDATE_ONLY=true
-    echo "🔄 Running in UPDATE mode (will only update configs and scripts)"
+    echo "🔄 Running in UPDATE mode (update configs & scripts only)"
 fi
 
 # -----------------------------------------------------------------------------
@@ -36,7 +36,7 @@ rm -rf "$CONFIG_TEMP_DIR"
 git clone --depth=1 "$CONFIG_REPO" "$CONFIG_TEMP_DIR"
 
 # -----------------------------------------------------------------------------
-# Backup existing .config folder (optional safety)
+# Backup existing .config folder (fresh install only)
 # -----------------------------------------------------------------------------
 if [ "$UPDATE_ONLY" = false ]; then
     BACKUP_DIR="$HOME/.config.bak_$(date +%Y%m%d%H%M%S)"
@@ -47,16 +47,12 @@ fi
 mkdir -p "$HOME/.config"
 
 # -----------------------------------------------------------------------------
-# Copy configs to ~/.config (excluding scripts first)
+# Copy configs to ~/.config
 # -----------------------------------------------------------------------------
-echo "📂 Copying configs (excluding scripts)..."
-shopt -s extglob
-cp -rf "$CONFIG_TEMP_DIR/.config"/!(scripts) "$HOME/.config/" || true
-shopt -u extglob
+echo "📂 Copying configs..."
+cp -rf "$CONFIG_TEMP_DIR/.config/"* "$HOME/.config/"
 
-# -----------------------------------------------------------------------------
 # Force update scripts folder
-# -----------------------------------------------------------------------------
 if [ -d "$CONFIG_TEMP_DIR/.config/scripts" ]; then
     echo "🔧 Updating scripts folder..."
     rm -rf "$HOME/.config/scripts"
@@ -67,7 +63,7 @@ fi
 find "$HOME/.config/scripts" -type f -exec chmod +x {} \;
 
 # -----------------------------------------------------------------------------
-# Copy wallpapers if fresh install
+# Copy wallpapers (fresh install only)
 # -----------------------------------------------------------------------------
 if [ "$UPDATE_ONLY" = false ] && [ -d "$CONFIG_TEMP_DIR/wallpapers" ]; then
     WALLPAPER_DIR="$HOME/Pictures/wallpapers"
