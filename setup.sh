@@ -2,16 +2,27 @@
 set -e
 
 # -----------------------------------------------------------------------------
-# Check if running as update-only
+# Check for update-only and debug flags
 # -----------------------------------------------------------------------------
 UPDATE_ONLY=false
-if [[ "$1" == "--update" ]]; then
-    UPDATE_ONLY=true
+DEBUG=false
+
+for arg in "$@"; do
+    case $arg in
+        --update) UPDATE_ONLY=true ;;
+        --debug) DEBUG=true ;;
+    esac
+done
+
+if [ "$UPDATE_ONLY" = true ]; then
     echo "🔄 Running in UPDATE mode (update configs & scripts only)"
+fi
+if [ "$DEBUG" = true ]; then
+    echo "🐞 Debug mode enabled (will print every file copied)"
 fi
 
 # -----------------------------------------------------------------------------
-# Install dependencies (only on fresh installs)
+# Install dependencies (fresh install only)
 # -----------------------------------------------------------------------------
 if [ "$UPDATE_ONLY" = false ]; then
     echo "📦 Installing required packages..."
@@ -47,15 +58,29 @@ fi
 mkdir -p "$HOME/.config"
 
 # -----------------------------------------------------------------------------
-# Copy configs to ~/.config
+# Copy configs (excluding scripts first)
 # -----------------------------------------------------------------------------
 echo "📂 Copying configs..."
-cp -rf "$CONFIG_TEMP_DIR/.config/"* "$HOME/.config/"
+shopt -s dotglob
+for file in "$CONFIG_TEMP_DIR/.config/"*; do
+    if [ "$(basename "$file")" != "scripts" ]; then
+        if [ "$DEBUG" = true ]; then
+            echo "Copying $file -> ~/.config/"
+        fi
+        cp -rf "$file" "$HOME/.config/"
+    fi
+done
+shopt -u dotglob
 
+# -----------------------------------------------------------------------------
 # Force update scripts folder
+# -----------------------------------------------------------------------------
 if [ -d "$CONFIG_TEMP_DIR/.config/scripts" ]; then
     echo "🔧 Updating scripts folder..."
     rm -rf "$HOME/.config/scripts"
+    if [ "$DEBUG" = true ]; then
+        echo "Copying $CONFIG_TEMP_DIR/.config/scripts -> ~/.config/scripts"
+    fi
     cp -rf "$CONFIG_TEMP_DIR/.config/scripts" "$HOME/.config/scripts"
 fi
 
@@ -69,7 +94,12 @@ if [ "$UPDATE_ONLY" = false ] && [ -d "$CONFIG_TEMP_DIR/wallpapers" ]; then
     WALLPAPER_DIR="$HOME/Pictures/wallpapers"
     mkdir -p "$WALLPAPER_DIR"
     echo "🖼 Copying wallpapers..."
-    cp -rf "$CONFIG_TEMP_DIR/wallpapers/"* "$WALLPAPER_DIR/"
+    for wp in "$CONFIG_TEMP_DIR/wallpapers/"*; do
+        if [ "$DEBUG" = true ]; then
+            echo "Copying $wp -> $WALLPAPER_DIR/"
+        fi
+        cp -rf "$wp" "$WALLPAPER_DIR/"
+    done
 fi
 
 # -----------------------------------------------------------------------------
